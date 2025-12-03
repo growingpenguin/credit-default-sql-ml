@@ -31,3 +31,15 @@ dist/
 build/
 *.egg-info/
 
+# Model files (too large for git)
+*.pt
+*.pth
+*.h5
+*.pkl
+
+# Log files
+*.log
+
+# Keep prediction CSVs but ignore raw data
+!data/*_predictions.csv
+
