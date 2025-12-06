@@ -57,8 +57,19 @@ def load_uci_data():
     os.makedirs('../data', exist_ok=True)
     df.to_csv('../data/credit_default_raw.csv', index=False)
     
+    # Calculate default rate safely (handle different possible column names)
+    target_col = None
+    for col in ['default.payment.next.month', 'Y', 'default payment next month']:
+        if col in df.columns:
+            target_col = col
+            break
+    
     print(f"✓ Dataset saved: {df.shape[0]} rows, {df.shape[1]} columns")
-    print(f"✓ Default rate: {df['default.payment.next.month'].values.mean():.2%}")
+    if target_col:
+        print(f"✓ Default rate: {df[target_col].values.mean():.2%}")
+    else:
+        # Fallback: use original y variable which is always available
+        print(f"✓ Default rate: {y.values.mean():.2%}")
     
     return df
 

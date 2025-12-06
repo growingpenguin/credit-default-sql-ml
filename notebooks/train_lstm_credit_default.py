@@ -355,7 +355,7 @@ def main():
             break
     
     # Load best model and evaluate on test set
-    model.load_state_dict(torch.load('best_lstm_model.pt', weights_only=True))
+    model.load_state_dict(torch.load('best_lstm_model.pt'))
     test_loss, test_auc, test_preds, test_actuals = evaluate(model, test_loader, criterion, DEVICE)
     
     # Convert predictions to binary

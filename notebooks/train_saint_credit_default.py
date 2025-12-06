@@ -384,7 +384,7 @@ def main():
             break
     
     # Evaluate on test set
-    model.load_state_dict(torch.load('best_saint_model.pt', weights_only=True))
+    model.load_state_dict(torch.load('best_saint_model.pt'))
     test_loss, test_auc, test_preds, test_actuals = evaluate(model, test_loader, criterion, DEVICE)
     test_preds_binary = (np.array(test_preds) > 0.5).astype(int)
     
