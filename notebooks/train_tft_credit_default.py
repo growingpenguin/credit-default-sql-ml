@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Temporal Fusion Transformer (TFT) for Credit Card Default Prediction
-Handles both static features and temporal sequences with interpretable attention
+Temporal Fusion Transformer for Credit Card Default Prediction
+Handles both static and temporal features with gating and attention
 """
 
 import pandas as pd
@@ -29,188 +29,130 @@ torch.manual_seed(42)
 np.random.seed(42)
 
 
-class CreditTemporalDataset(Dataset):
-    """Dataset with static and temporal features"""
+class CreditTFTDataset(Dataset):
+    """Dataset for TFT with static and temporal features"""
     
     def __init__(self, static_features, temporal_features, labels):
-        self.static = torch.FloatTensor(static_features)
-        self.temporal = torch.FloatTensor(temporal_features)
+        self.static_features = torch.FloatTensor(static_features)
+        self.temporal_features = torch.FloatTensor(temporal_features)
         self.labels = torch.FloatTensor(labels)
     
     def __len__(self):
         return len(self.labels)
     
     def __getitem__(self, idx):
-        return self.static[idx], self.temporal[idx], self.labels[idx]
-
-
-class GatedLinearUnit(nn.Module):
-    """GLU activation for feature selection"""
-    
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.fc1 = nn.Linear(input_dim, output_dim)
-        self.fc2 = nn.Linear(input_dim, output_dim)
-        self.sigmoid = nn.Sigmoid()
-    
-    def forward(self, x):
-        return self.fc1(x) * self.sigmoid(self.fc2(x))
+        return self.static_features[idx], self.temporal_features[idx], self.labels[idx]
 
 
 class GatedResidualNetwork(nn.Module):
-    """GRN: Core building block of TFT"""
+    """Gated Residual Network - core building block of TFT"""
     
     def __init__(self, input_dim, hidden_dim, output_dim, dropout=0.1, context_dim=None):
         super().__init__()
         
         self.input_dim = input_dim
         self.output_dim = output_dim
-        
-        # Primary path
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.elu = nn.ELU()
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
-        self.dropout = nn.Dropout(dropout)
-        
-        # Context (optional)
         self.context_dim = context_dim
-        if context_dim is not None:
-            self.context_fc = nn.Linear(context_dim, hidden_dim, bias=False)
-        
-        # GLU for gating
-        self.glu = GatedLinearUnit(output_dim, output_dim)
-        
-        # Layer norm
-        self.layer_norm = nn.LayerNorm(output_dim)
-        
-        # Skip connection projection if dimensions differ
-        if input_dim != output_dim:
-            self.skip_proj = nn.Linear(input_dim, output_dim)
-        else:
-            self.skip_proj = None
-    
-    def forward(self, x, context=None):
-        # Primary transformation
-        hidden = self.fc1(x)
-        
-        # Add context if provided
-        if context is not None and self.context_dim is not None:
-            hidden = hidden + self.context_fc(context)
-        
-        hidden = self.elu(hidden)
-        hidden = self.fc2(hidden)
-        hidden = self.dropout(hidden)
-        
-        # GLU gating
-        gated = self.glu(hidden)
-        
-        # Skip connection
-        if self.skip_proj is not None:
-            skip = self.skip_proj(x)
-        else:
-            skip = x
-        
-        # Residual + LayerNorm
-        return self.layer_norm(skip + gated)
-
-
-class VariableSelectionNetwork(nn.Module):
-    """VSN: Selects relevant features"""
-    
-    def __init__(self, input_dim, num_features, hidden_dim, dropout=0.1, context_dim=None):
-        super().__init__()
-        
-        self.num_features = num_features
         self.hidden_dim = hidden_dim
         
-        # GRN for each feature
-        self.feature_grns = nn.ModuleList([
-            GatedResidualNetwork(input_dim, hidden_dim, hidden_dim, dropout, context_dim)
-            for _ in range(num_features)
-        ])
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.elu = nn.ELU()
         
-        # Softmax weights for feature selection
-        self.softmax_fc = nn.Linear(num_features * hidden_dim, num_features)
-        self.softmax = nn.Softmax(dim=-1)
+        if context_dim is not None:
+            self.context_projection = nn.Linear(context_dim, hidden_dim, bias=False)
+        
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+        
+        self.gate = nn.Linear(hidden_dim, output_dim)
+        self.sigmoid = nn.Sigmoid()
+        
+        self.fc_out = nn.Linear(hidden_dim, output_dim)
+        
+        if input_dim != output_dim:
+            self.skip_projection = nn.Linear(input_dim, output_dim)
+        else:
+            self.skip_projection = None
+        
+        self.layer_norm = nn.LayerNorm(output_dim)
     
     def forward(self, x, context=None):
-        # x: (batch, num_features, input_dim)
-        batch_size = x.shape[0]
+        residual = x
         
-        # Process each feature through its GRN
-        processed = []
-        for i in range(self.num_features):
-            feat = x[:, i, :]  # (batch, input_dim)
-            processed.append(self.feature_grns[i](feat, context))
+        x = self.fc1(x)
+        if context is not None and self.context_dim is not None:
+            x = x + self.context_projection(context)
         
-        processed = torch.stack(processed, dim=1)  # (batch, num_features, hidden_dim)
+        x = self.elu(x)
+        x = self.fc2(x)
+        x = self.dropout(x)
         
-        # Calculate feature weights
-        flat = processed.reshape(batch_size, -1)  # (batch, num_features * hidden_dim)
-        weights = self.softmax(self.softmax_fc(flat))  # (batch, num_features)
+        gate = self.sigmoid(self.gate(x))
+        x = self.fc_out(x)
+        x = gate * x
         
-        # Weighted sum
-        weights = weights.unsqueeze(-1)  # (batch, num_features, 1)
-        selected = (processed * weights).sum(dim=1)  # (batch, hidden_dim)
+        if self.skip_projection is not None:
+            residual = self.skip_projection(residual)
         
-        return selected, weights.squeeze(-1)
+        x = self.layer_norm(x + residual)
+        
+        return x
 
 
 class TemporalFusionTransformer(nn.Module):
-    """Simplified TFT for credit default prediction"""
+    """Temporal Fusion Transformer for credit default"""
     
-    def __init__(self, static_dim, temporal_dim, num_timesteps=6, hidden_dim=64, n_heads=4, dropout=0.1):
+    def __init__(self, static_dim, temporal_dim, hidden_dim=128, num_heads=4, dropout=0.1):
         super().__init__()
         
+        self.static_dim = static_dim
+        self.temporal_dim = temporal_dim
         self.hidden_dim = hidden_dim
-        self.num_timesteps = num_timesteps
         
-        # Static variable selection
-        self.static_vsn = VariableSelectionNetwork(
-            input_dim=1, 
-            num_features=static_dim,
+        self.static_encoder = GatedResidualNetwork(
+            input_dim=static_dim,
             hidden_dim=hidden_dim,
+            output_dim=hidden_dim,
             dropout=dropout
         )
         
-        # Static context encoders
-        self.static_context_grn = GatedResidualNetwork(hidden_dim, hidden_dim, hidden_dim, dropout)
-        
-        # Temporal embedding
-        self.temporal_embed = nn.Linear(temporal_dim, hidden_dim)
-        
-        # LSTM encoder for temporal processing
-        self.lstm_encoder = nn.LSTM(
-            input_size=hidden_dim,
+        self.temporal_encoder = nn.LSTM(
+            input_size=temporal_dim,
             hidden_size=hidden_dim,
             num_layers=1,
             batch_first=True,
             dropout=0
         )
         
-        # Self-attention for temporal patterns
-        self.temporal_attention = nn.MultiheadAttention(
+        self.temporal_variable_selection = GatedResidualNetwork(
+            input_dim=hidden_dim,
+            hidden_dim=hidden_dim,
+            output_dim=hidden_dim,
+            dropout=dropout,
+            context_dim=hidden_dim
+        )
+        
+        self.attention = nn.MultiheadAttention(
             embed_dim=hidden_dim,
-            num_heads=n_heads,
+            num_heads=num_heads,
             dropout=dropout,
             batch_first=True
         )
-        self.attention_norm = nn.LayerNorm(hidden_dim)
         
-        # Gated skip connection
-        self.temporal_glu = GatedLinearUnit(hidden_dim, hidden_dim)
-        self.temporal_norm = nn.LayerNorm(hidden_dim)
-        
-        # Final GRN for combining static and temporal
-        self.combine_grn = GatedResidualNetwork(
-            hidden_dim * 2, hidden_dim, hidden_dim, dropout
+        self.post_attention_grn = GatedResidualNetwork(
+            input_dim=hidden_dim,
+            hidden_dim=hidden_dim,
+            output_dim=hidden_dim,
+            dropout=dropout
         )
         
-        # Classification head
-        self.classifier = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(dropout),
+        self.output_layer = nn.Sequential(
+            GatedResidualNetwork(
+                input_dim=hidden_dim,
+                hidden_dim=hidden_dim,
+                output_dim=hidden_dim // 2,
+                dropout=dropout
+            ),
             nn.Linear(hidden_dim // 2, 1),
             nn.Sigmoid()
         )
@@ -218,85 +160,46 @@ class TemporalFusionTransformer(nn.Module):
     def forward(self, static_features, temporal_features):
         batch_size = static_features.shape[0]
         
-        # Process static features
-        static_expanded = static_features.unsqueeze(-1)  # (batch, static_dim, 1)
-        static_encoded, static_weights = self.static_vsn(static_expanded)
-        static_context = self.static_context_grn(static_encoded)
+        static_context = self.static_encoder(static_features)
+        temporal_encoded, _ = self.temporal_encoder(temporal_features)
         
-        # Process temporal features
-        temporal_embedded = self.temporal_embed(temporal_features)  # (batch, timesteps, hidden)
+        temporal_selected = self.temporal_variable_selection(
+            temporal_encoded.reshape(-1, self.hidden_dim),
+            context=static_context.unsqueeze(1).expand(-1, temporal_encoded.shape[1], -1).reshape(-1, self.hidden_dim)
+        )
+        temporal_selected = temporal_selected.reshape(batch_size, -1, self.hidden_dim)
         
-        # LSTM encoding
-        lstm_out, (hidden, cell) = self.lstm_encoder(temporal_embedded)
+        attn_output, _ = self.attention(temporal_selected, temporal_selected, temporal_selected)
+        enriched = self.post_attention_grn(attn_output.mean(dim=1))
         
-        # Self-attention on temporal sequence
-        attn_out, attn_weights = self.temporal_attention(lstm_out, lstm_out, lstm_out)
-        temporal_attended = self.attention_norm(lstm_out + attn_out)
+        output = self.output_layer(enriched)
         
-        # Gated skip connection
-        temporal_gated = self.temporal_glu(temporal_attended)
-        temporal_out = self.temporal_norm(temporal_embedded + temporal_gated)
-        
-        # Take last timestep
-        temporal_final = temporal_out[:, -1, :]  # (batch, hidden)
-        
-        # Combine static and temporal
-        combined = torch.cat([static_context, temporal_final], dim=-1)
-        fused = self.combine_grn(combined)
-        
-        # Classify
-        output = self.classifier(fused)
-        
-        return output.squeeze(), static_weights, attn_weights
+        return output.squeeze()
 
 
 def load_data_from_db():
-    """Load data from SQLite database with proper schema"""
+    """Load data from SQLite database"""
     conn = sqlite3.connect('../data/credit_default.db')
     
-    # Load static features
-    static_query = """
-    SELECT 
-        c.customer_id,
-        c.age, c.sex, c.education, c.marriage,
-        ca.credit_limit,
-        l.defaulted as default_label
+    query = """
+    SELECT c.customer_id, c.age, c.sex, c.education, c.marriage,
+           ca.credit_limit,
+           ps.pay_sept, ps.pay_aug, ps.pay_jul, ps.pay_jun, ps.pay_may, ps.pay_apr,
+           s.bill_sept, s.bill_aug, s.bill_jul, s.bill_jun, s.bill_may, s.bill_apr,
+           p.pay_sept as pay_amt_sept, p.pay_aug as pay_amt_aug, 
+           p.pay_jul as pay_amt_jul, p.pay_jun as pay_amt_jun,
+           p.pay_may as pay_amt_may, p.pay_apr as pay_amt_apr,
+           l.default_label
     FROM customers c
     JOIN credit_accounts ca ON c.customer_id = ca.customer_id
+    JOIN payment_status ps ON c.customer_id = ps.customer_id
+    JOIN statements s ON c.customer_id = s.customer_id
+    JOIN payments p ON c.customer_id = p.customer_id
     JOIN labels l ON c.customer_id = l.customer_id
     """
-    static_df = pd.read_sql_query(static_query, conn)
     
-    # Load and pivot payment status
-    pay_status_df = pd.read_sql_query(
-        "SELECT account_id, status_month, repayment_status FROM payment_status ORDER BY account_id, status_month",
-        conn
-    )
-    pay_pivot = pay_status_df.pivot(index='account_id', columns='status_month', values='repayment_status').reset_index()
-    pay_pivot.columns = ['account_id'] + [f'pay_status_{i}' for i in range(6)]
-    
-    # Load and pivot bills
-    bills_df = pd.read_sql_query(
-        "SELECT account_id, statement_month, bill_amount FROM statements ORDER BY account_id, statement_month",
-        conn
-    )
-    bills_pivot = bills_df.pivot(index='account_id', columns='statement_month', values='bill_amount').reset_index()
-    bills_pivot.columns = ['account_id'] + [f'bill_amt_{i}' for i in range(1, 7)]
-    
-    # Load and pivot payments
-    payments_df = pd.read_sql_query(
-        "SELECT account_id, payment_month, payment_amount FROM payments ORDER BY account_id, payment_month",
-        conn
-    )
-    payments_pivot = payments_df.pivot(index='account_id', columns='payment_month', values='payment_amount').reset_index()
-    payments_pivot.columns = ['account_id'] + [f'pay_amt_{i}' for i in range(1, 7)]
-    
+    df = pd.read_sql_query(query, conn)
     conn.close()
-    
-    # Merge all
-    df = static_df.merge(pay_pivot, left_on='customer_id', right_on='account_id')
-    df = df.merge(bills_pivot, on='account_id')
-    df = df.merge(payments_pivot, on='account_id')
     
     return df
 
@@ -310,24 +213,28 @@ def prepare_features(df):
     static_cols = ['age', 'sex', 'education', 'marriage', 'credit_limit']
     static_features = df[static_cols].values
     
-    # Temporal features: (samples, timesteps=6, features=3)
-    pay_cols = [f'pay_status_{i}' for i in range(6)]
-    bill_cols = [f'bill_amt_{i}' for i in range(1, 7)]
-    pay_amt_cols = [f'pay_amt_{i}' for i in range(1, 7)]
+    # Temporal features (6 timesteps)
+    pay_cols = ['pay_sept', 'pay_aug', 'pay_jul', 'pay_jun', 'pay_may', 'pay_apr']
+    bill_cols = ['bill_sept', 'bill_aug', 'bill_jul', 'bill_jun', 'bill_may', 'bill_apr']
+    payment_cols = ['pay_amt_sept', 'pay_amt_aug', 'pay_amt_jul', 'pay_amt_jun', 'pay_amt_may', 'pay_amt_apr']
     
-    temporal_features = np.zeros((len(df), 6, 3))
-    for t in range(6):
-        temporal_features[:, t, 0] = df[pay_cols[t]].values
-        temporal_features[:, t, 1] = df[bill_cols[t]].values
-        temporal_features[:, t, 2] = df[pay_amt_cols[t]].values
+    temporal_features = []
+    for idx in range(len(df)):
+        timesteps = []
+        for t in range(6):
+            pay_val = df[pay_cols[t]].iloc[idx]
+            bill_val = df[bill_cols[t]].iloc[idx]
+            payment_val = df[payment_cols[t]].iloc[idx]
+            timesteps.append([pay_val, bill_val, payment_val])
+        temporal_features.append(timesteps)
     
+    temporal_features = np.array(temporal_features)
     labels = df['default_label'].values
     
-    return customer_ids, static_features, temporal_features, labels, static_cols
+    return customer_ids, static_features, temporal_features, labels
 
 
 def train_epoch(model, dataloader, criterion, optimizer, device):
-    """Train for one epoch"""
     model.train()
     total_loss = 0
     predictions, actuals = [], []
@@ -336,7 +243,7 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
         static, temporal, labels = static.to(device), temporal.to(device), labels.to(device)
         
         optimizer.zero_grad()
-        outputs, _, _ = model(static, temporal)
+        outputs = model(static, temporal)
         loss = criterion(outputs, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -351,65 +258,53 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
 
 def evaluate(model, dataloader, criterion, device):
-    """Evaluate model"""
     model.eval()
     total_loss = 0
     predictions, actuals = [], []
-    all_static_weights, all_attn_weights = [], []
     
     with torch.no_grad():
         for static, temporal, labels in dataloader:
             static, temporal, labels = static.to(device), temporal.to(device), labels.to(device)
-            outputs, static_weights, attn_weights = model(static, temporal)
+            outputs = model(static, temporal)
             loss = criterion(outputs, labels)
             
             total_loss += loss.item()
             predictions.extend(outputs.cpu().numpy())
             actuals.extend(labels.cpu().numpy())
-            all_static_weights.append(static_weights.cpu().numpy())
-            all_attn_weights.append(attn_weights.cpu().numpy())
     
     auc = roc_auc_score(actuals, predictions)
-    static_weights_avg = np.concatenate(all_static_weights, axis=0).mean(axis=0)
-    
-    return total_loss / len(dataloader), auc, predictions, actuals, static_weights_avg
+    return total_loss / len(dataloader), auc, predictions, actuals
 
 
 def main():
-    # Configuration
-    DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
+    DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     BATCH_SIZE = 256
     EPOCHS = 100
     LEARNING_RATE = 0.001
     PATIENCE = 15
     
     print("=" * 60)
-    print("DEEP LEARNING MODEL: Temporal Fusion Transformer (TFT)")
+    print("DEEP LEARNING MODEL: Temporal Fusion Transformer")
     print("=" * 60)
     print(f"Device: {DEVICE}")
     
-    # Load data
     print("\nLoading data from database...")
     df = load_data_from_db()
     print(f"Dataset shape: {df.shape}")
     print(f"Default rate: {df['default_label'].mean():.2%}")
     
-    # Prepare features
     print("\nPreparing features...")
-    customer_ids, static_features, temporal_features, labels, static_cols = prepare_features(df)
-    
-    print(f"Static features shape: {static_features.shape}")
-    print(f"Temporal features shape: {temporal_features.shape}")
+    customer_ids, static_features, temporal_features, labels = prepare_features(df)
+    print(f"Class distribution:\n{pd.Series(labels).value_counts()}")
     
     # Normalize
     static_scaler = StandardScaler()
     static_features = static_scaler.fit_transform(static_features)
     
-    temporal_shape = temporal_features.shape
-    temporal_flat = temporal_features.reshape(-1, temporal_shape[-1])
     temporal_scaler = StandardScaler()
-    temporal_flat = temporal_scaler.fit_transform(temporal_flat)
-    temporal_features = temporal_flat.reshape(temporal_shape)
+    temporal_features_flat = temporal_features.reshape(-1, temporal_features.shape[-1])
+    temporal_features_flat = temporal_scaler.fit_transform(temporal_features_flat)
+    temporal_features = temporal_features_flat.reshape(temporal_features.shape)
     
     # Split data
     indices = np.arange(len(labels))
@@ -426,10 +321,10 @@ def main():
     print(f"Validation set: {len(y_val)} samples")
     print(f"Test set: {len(y_test)} samples")
     
-    # Create dataloaders
-    train_dataset = CreditTemporalDataset(X_static_train, X_temp_train, y_train)
-    val_dataset = CreditTemporalDataset(X_static_val, X_temp_val, y_val)
-    test_dataset = CreditTemporalDataset(X_static_test, X_temp_test, y_test)
+    # Create datasets
+    train_dataset = CreditTFTDataset(X_static_train, X_temp_train, y_train)
+    val_dataset = CreditTFTDataset(X_static_val, X_temp_val, y_val)
+    test_dataset = CreditTFTDataset(X_static_test, X_temp_test, y_test)
     
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
@@ -439,28 +334,24 @@ def main():
     model = TemporalFusionTransformer(
         static_dim=static_features.shape[1],
         temporal_dim=temporal_features.shape[2],
-        num_timesteps=6,
-        hidden_dim=64,
-        n_heads=4,
-        dropout=0.2
+        hidden_dim=128,
+        num_heads=4,
+        dropout=0.1
     ).to(DEVICE)
-    
-    print(f"\nModel parameters: {sum(p.numel() for p in model.parameters()):,}")
     
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
     
-    # Training loop
+    # Training
     best_val_auc = 0
     patience_counter = 0
-    train_losses, val_losses = [], []
-    train_aucs, val_aucs = [], []
+    train_losses, val_losses, train_aucs, val_aucs = [], [], [], []
     
     print("\nTraining...")
     for epoch in range(EPOCHS):
         train_loss, train_auc = train_epoch(model, train_loader, criterion, optimizer, DEVICE)
-        val_loss, val_auc, _, _, _ = evaluate(model, val_loader, criterion, DEVICE)
+        val_loss, val_auc, _, _ = evaluate(model, val_loader, criterion, DEVICE)
         
         train_losses.append(train_loss)
         val_losses.append(val_loss)
@@ -485,8 +376,8 @@ def main():
             break
     
     # Evaluate
-    model.load_state_dict(torch.load('best_tft_model.pt', weights_only=True))
-    test_loss, test_auc, test_preds, test_actuals, static_weights = evaluate(model, test_loader, criterion, DEVICE)
+    model.load_state_dict(torch.load('best_tft_model.pt'))
+    test_loss, test_auc, test_preds, test_actuals = evaluate(model, test_loader, criterion, DEVICE)
     test_preds_binary = (np.array(test_preds) > 0.5).astype(int)
     
     print("\n" + "="*60)
@@ -496,53 +387,43 @@ def main():
     print(f"\nClassification Report:")
     print(classification_report(test_actuals, test_preds_binary))
     
-    # Feature importance from static weights
-    print(f"\nStatic Feature Importance (from Variable Selection Network):")
-    importance_df = pd.DataFrame({
-        'feature': static_cols,
-        'importance': static_weights
-    }).sort_values('importance', ascending=False)
-    print(importance_df.to_string(index=False))
-    
     # Visualizations
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    ax1.plot(train_losses, label='Train', linewidth=2)
+    ax1.plot(val_losses, label='Validation', linewidth=2)
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Loss')
+    ax1.set_title('Training and Validation Loss')
+    ax1.legend()
+    ax1.grid(alpha=0.3)
     
-    # Training curves
-    axes[0, 0].plot(train_losses, label='Train', linewidth=2)
-    axes[0, 0].plot(val_losses, label='Validation', linewidth=2)
-    axes[0, 0].set_xlabel('Epoch')
-    axes[0, 0].set_ylabel('Loss')
-    axes[0, 0].set_title('Training and Validation Loss')
-    axes[0, 0].legend()
-    axes[0, 0].grid(alpha=0.3)
+    ax2.plot(train_aucs, label='Train', linewidth=2)
+    ax2.plot(val_aucs, label='Validation', linewidth=2)
+    ax2.set_xlabel('Epoch')
+    ax2.set_ylabel('AUC-ROC')
+    ax2.set_title('Training and Validation AUC')
+    ax2.legend()
+    ax2.grid(alpha=0.3)
     
-    axes[0, 1].plot(train_aucs, label='Train', linewidth=2)
-    axes[0, 1].plot(val_aucs, label='Validation', linewidth=2)
-    axes[0, 1].set_xlabel('Epoch')
-    axes[0, 1].set_ylabel('AUC-ROC')
-    axes[0, 1].set_title('Training and Validation AUC')
-    axes[0, 1].legend()
-    axes[0, 1].grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('../notebooks/tft_training_curves.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    print("\n✅ Training curves saved")
     
     # ROC Curve
     fpr, tpr, _ = roc_curve(test_actuals, test_preds)
-    axes[1, 0].plot(fpr, tpr, linewidth=2, label=f'TFT (AUC={test_auc:.3f})')
-    axes[1, 0].plot([0, 1], [0, 1], 'k--', label='Random')
-    axes[1, 0].set_xlabel('False Positive Rate')
-    axes[1, 0].set_ylabel('True Positive Rate')
-    axes[1, 0].set_title('ROC Curve - TFT')
-    axes[1, 0].legend()
-    axes[1, 0].grid(alpha=0.3)
-    
-    # Feature importance
-    axes[1, 1].barh(importance_df['feature'], importance_df['importance'])
-    axes[1, 1].set_xlabel('Importance')
-    axes[1, 1].set_title('Static Feature Importance (VSN Weights)')
-    
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, linewidth=2, label=f'TFT (AUC={test_auc:.3f})')
+    plt.plot([0, 1], [0, 1], 'k--', label='Random Classifier')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve - Temporal Fusion Transformer')
+    plt.legend()
+    plt.grid(alpha=0.3)
     plt.tight_layout()
-    plt.savefig('tft_results.png', dpi=300, bbox_inches='tight')
+    plt.savefig('../notebooks/tft_roc_curve.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("\n✅ Results saved to tft_results.png")
+    print("✅ ROC curve saved")
     
     # Confusion Matrix
     cm = confusion_matrix(test_actuals, test_preds_binary)
@@ -552,7 +433,7 @@ def main():
     plt.ylabel('Actual')
     plt.title('Confusion Matrix - TFT')
     plt.tight_layout()
-    plt.savefig('tft_confusion_matrix.png', dpi=300, bbox_inches='tight')
+    plt.savefig('../notebooks/tft_confusion_matrix.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("✅ Confusion matrix saved")
     
@@ -569,4 +450,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
