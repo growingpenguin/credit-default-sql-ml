@@ -1,6 +1,8 @@
 # 💳 Credit Card Default Risk Prediction (SQL → ML → Deep Learning)
 
-A complete **SQL-first** data science project demonstrating feature engineering, traditional ML, and **SOTA deep learning models** for credit risk assessment using the **UCI Credit Card Default dataset**.
+[![ML Pipeline](https://github.com/growingpenguin/credit-default-sql-ml/actions/workflows/ml-pipeline.yml/badge.svg)](https://github.com/growingpenguin/credit-default-sql-ml/actions/workflows/ml-pipeline.yml)
+
+A complete **SQL-first** data science project demonstrating feature engineering, traditional ML, **SOTA deep learning models**, and **CI/CD automation** for credit risk assessment using the **UCI Credit Card Default dataset**.
 
 ## 🎯 Project Objective
 
@@ -20,6 +22,9 @@ Predict which credit card customers will default on their next payment using:
 
 ```
 credit-default-sql-ml/
+├── .github/
+│   └── workflows/
+│       └── ml-pipeline.yml             # 🚀 CI/CD Pipeline (GitHub Actions)
 ├── data/
 │   ├── load_data.py                    # Downloads UCI dataset
 │   ├── credit_default_raw.csv          # Raw data (generated)
@@ -228,7 +233,62 @@ Each file contains:
 - **Feature Engineering**: Domain-specific credit risk indicators
 - **Traditional ML**: XGBoost, LightGBM, Random Forest, model comparison
 - **Deep Learning**: PyTorch, Transformers, LSTM, attention mechanisms
+- **CI/CD**: GitHub Actions, automated testing, MLOps
+- **Version Control**: GitFlow branching strategy
 - **Data Pipeline**: End-to-end from raw data to predictions
+
+---
+
+## 🔄 CI/CD Pipeline (GitHub Actions)
+
+This project includes an automated CI/CD pipeline that runs on every push to `main` or `develop` branches.
+
+### What is CI/CD?
+
+- **CI (Continuous Integration)**: Automatically test code when you push changes
+- **CD (Continuous Deployment)**: Automatically deploy/release after tests pass
+
+### Pipeline Stages
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     🚀 ML PIPELINE                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  JOB 1: SETUP & TEST                                               │
+│  ├── 📥 Checkout code from GitHub                                  │
+│  ├── 🐍 Set up Python 3.11                                         │
+│  ├── 📦 Install dependencies                                       │
+│  ├── 📊 Load UCI dataset                                           │
+│  ├── 🗄️ Create database & feature engineering                      │
+│  └── ✅ Verify database (30,000 rows)                              │
+│                                                                     │
+│  JOB 2: TRAIN MODELS                                               │
+│  ├── 📥 Download database from Job 1                               │
+│  ├── 🤖 Train XGBoost model                                        │
+│  └── 📤 Save model results                                         │
+│                                                                     │
+│  JOB 3: VALIDATE RESULTS                                           │
+│  ├── 🔍 Check AUC-ROC >= 0.75 threshold                           │
+│  └── 🎉 Report success/failure                                     │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### How to View Pipeline Runs
+
+1. Go to your repository on GitHub
+2. Click on the **"Actions"** tab
+3. View pipeline runs, logs, and status
+
+### Pipeline Triggers
+
+| Trigger | Description |
+|---------|-------------|
+| Push to `main` | Runs on every push to main branch |
+| Push to `develop` | Runs on every push to develop branch |
+| Pull Request | Runs when PR is opened to main/develop |
+| Manual | Can be triggered manually from GitHub UI |
 
 ---
 
