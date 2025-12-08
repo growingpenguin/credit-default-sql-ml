@@ -10,7 +10,6 @@
  */
 
 import React, { useState } from 'react';
-import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { 
   BANK_PROVIDERS, 
@@ -142,8 +141,8 @@ export function LinkBankAccount({ onComplete, onClose }: LinkBankAccountProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md overflow-hidden !p-0">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-[#1A365D] to-[#0891B2] p-5 text-white">
           <div className="flex items-center justify-between">
@@ -378,7 +377,7 @@ export function LinkBankAccount({ onComplete, onClose }: LinkBankAccountProps) {
             </div>
           )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
