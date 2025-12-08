@@ -17,11 +17,13 @@
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/config/GlobalExceptionHandler.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/security/CustomUserDetailsService.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/CreditWiseApplication.java
+/Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/config/WebSocketConfig.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/entity/LoanProduct.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/config/DataLoader.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/controller/AuthController.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/service/UserService.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/CreditScoreResponse.java
+/Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/websocket/PredictionWebSocketHandler.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/security/JwtTokenProvider.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/AuthRequest.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/MLPredictionRequest.java
