@@ -13,21 +13,25 @@ interface DashboardPageProps {
   onApplyLoan: (loanType: string) => void;
 }
 
-export function DashboardPage({ userName, creditScore, onApplyLoan }: DashboardPageProps) {
+export function DashboardPage({ userName, creditScore: rawCreditScore, onApplyLoan }: DashboardPageProps) {
+  // Ensure creditScore has a valid default
+  const creditScore = rawCreditScore || 650;
+  
   const [loanRecommendations, setLoanRecommendations] = useState<PersonalizedLoan[]>([]);
   const [allProducts, setAllProducts] = useState<LoanProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useRealData, setUseRealData] = useState(true);
 
-  // Mock data for charts
+  // Mock data for charts - ensure no NaN values
+  const safeScore = Number.isFinite(creditScore) ? creditScore : 650;
   const paymentHistory = [
-    { month: 'Jan', score: creditScore - 34 },
-    { month: 'Feb', score: creditScore - 29 },
-    { month: 'Mar', score: creditScore - 22 },
-    { month: 'Apr', score: creditScore - 16 },
-    { month: 'May', score: creditScore - 9 },
-    { month: 'Jun', score: creditScore },
+    { month: 'Jan', score: safeScore - 34 },
+    { month: 'Feb', score: safeScore - 29 },
+    { month: 'Mar', score: safeScore - 22 },
+    { month: 'Apr', score: safeScore - 16 },
+    { month: 'May', score: safeScore - 9 },
+    { month: 'Jun', score: safeScore },
   ];
 
   // Fetch loan recommendations from API

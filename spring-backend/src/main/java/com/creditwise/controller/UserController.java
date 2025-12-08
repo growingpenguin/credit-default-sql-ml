@@ -2,6 +2,7 @@ package com.creditwise.controller;
 
 import com.creditwise.dto.CreditScoreResponse;
 import com.creditwise.dto.FinancialProfileRequest;
+import com.creditwise.dto.LoanPreferencesRequest;
 import com.creditwise.dto.UserResponse;
 import com.creditwise.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +40,15 @@ public class UserController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody FinancialProfileRequest request) {
         UserResponse response = userService.updateFinancialProfile(userDetails.getUsername(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/profile/loan-preferences")
+    @Operation(summary = "Update loan preferences")
+    public ResponseEntity<UserResponse> updateLoanPreferences(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody LoanPreferencesRequest request) {
+        UserResponse response = userService.updateLoanPreferences(userDetails.getUsername(), request);
         return ResponseEntity.ok(response);
     }
 
