@@ -11,7 +11,11 @@ import { LoginPage } from './components/pages/LoginPage';
 import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
 import { LinkBankAccount } from './components/LinkBankAccount';
-import { CustomerPersona, CUSTOMER_PERSONAS } from './data/mockBankAccounts';
+import { 
+  LinkedBankAccount, 
+  calculateDerivedProfile,
+  DerivedFinancialProfile 
+} from './data/bankProviders';
 import { 
   api, 
   User, 
@@ -37,8 +41,9 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Mock bank account state
-  const [selectedPersona, setSelectedPersona] = useState<CustomerPersona | null>(null);
+  // Linked bank accounts (user's own accounts)
+  const [linkedBanks, setLinkedBanks] = useState<LinkedBankAccount[]>([]);
+  const [derivedProfile, setDerivedProfile] = useState<DerivedFinancialProfile | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   
   // Password reset state
@@ -62,6 +67,22 @@ export default function App() {
     initAuth();
   }, []);
 
+  // Recalculate derived profile when linked banks change
+  useEffect(() => {
+    if (linkedBanks.length > 0) {
+      const profile = calculateDerivedProfile(linkedBanks);
+      setDerivedProfile(profile);
+      
+      // Update user's credit score with derived value
+      setUser(prev => prev ? {
+        ...prev,
+        credit_score: profile.estimatedCreditScore,
+      } : null);
+    } else {
+      setDerivedProfile(null);
+    }
+  }, [linkedBanks]);
+
   // Handle login
   const handleLogin = async (email: string, password: string) => {
     setError(null);
@@ -69,13 +90,7 @@ export default function App() {
       const response = await api.login({ email, password });
       setUser(response.user);
       setIsLoggedIn(true);
-      
-      // If no persona linked, show link modal, otherwise go to dashboard
-      if (!selectedPersona) {
-        setShowLinkModal(true);
-      } else {
-        setCurrentPage('dashboard');
-      }
+      setCurrentPage('dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
@@ -89,8 +104,7 @@ export default function App() {
       const response = await api.register({ email, password, full_name: fullName });
       setUser(response.user);
       setIsLoggedIn(true);
-      // Show link bank account after registration
-      setShowLinkModal(true);
+      setCurrentPage('dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
       throw err;
@@ -106,42 +120,39 @@ export default function App() {
     } finally {
       setUser(null);
       setIsLoggedIn(false);
-      setSelectedPersona(null);
+      setLinkedBanks([]);
+      setDerivedProfile(null);
       setCurrentPage('landing');
       removeToken();
     }
   };
 
-  // Handle persona selection (simulated bank account linking)
-  const handleSelectPersona = async (persona: CustomerPersona) => {
-    setSelectedPersona(persona);
+  // Handle linking a new bank account
+  const handleLinkBank = async (linkedBank: LinkedBankAccount) => {
+    // Add to linked banks list
+    setLinkedBanks(prev => [...prev, linkedBank]);
     setShowLinkModal(false);
     
-    // Update user with persona data
-    setUser(prev => prev ? {
-      ...prev,
-      full_name: persona.name,
-      credit_score: persona.expectedCreditScore,
-      default_probability: persona.expectedDefaultProb,
-    } : null);
-
     // Try to sync with backend
     try {
+      const profile = calculateDerivedProfile([...linkedBanks, linkedBank]);
       const financialProfile: FinancialProfile = {
-        annual_income: persona.annualIncome,
-        monthly_expenses: persona.monthlyExpenses,
-        credit_limit: persona.mlFeatures.LIMIT_BAL,
-        credit_accounts: persona.creditAccounts.length,
-        payment_frequency: persona.mlFeatures.PAY_0 <= 0 ? 'always' : 
-                          persona.mlFeatures.PAY_0 === 1 ? 'usually' : 'sometimes',
-        credit_utilization: Math.round((persona.mlFeatures.BILL_AMT1 / persona.mlFeatures.LIMIT_BAL) * 100),
+        annual_income: profile.estimatedAnnualIncome,
+        monthly_expenses: Math.round(profile.estimatedAnnualIncome / 12 * 0.6),
+        credit_limit: profile.totalCreditLimit,
+        credit_accounts: profile.accountsCount,
+        payment_frequency: 'usually',
+        credit_utilization: profile.creditUtilization,
       };
       await api.updateFinancialProfile(financialProfile);
     } catch (err) {
       console.log('Backend sync skipped (demo mode)');
     }
+  };
 
-    setCurrentPage('dashboard');
+  // Handle unlinking a bank
+  const handleUnlinkBank = (bankId: string) => {
+    setLinkedBanks(prev => prev.filter(b => b.bankId !== bankId));
   };
 
   // Handle form wizard submission (for manual entry)
@@ -282,11 +293,11 @@ export default function App() {
     );
   }
 
-  // Get user display data (prefer persona data if linked)
+  // Get user display data
   const userData: UserData = {
-    name: selectedPersona?.name || user?.full_name || 'User',
-    email: selectedPersona?.email || user?.email || '',
-    creditScore: selectedPersona?.expectedCreditScore || user?.credit_score || 650,
+    name: user?.full_name || 'User',
+    email: user?.email || '',
+    creditScore: derivedProfile?.estimatedCreditScore || user?.credit_score || 650,
   };
 
   return (
@@ -333,17 +344,9 @@ export default function App() {
           <div className="container mx-auto px-6 py-12">
             <div className="text-center mb-8">
               <h2 className="text-[#1A365D] mb-4">Check Your Eligibility</h2>
-              <p className="text-[#64748B] text-xl mb-6">
+              <p className="text-[#64748B] text-xl">
                 Complete this quick assessment to see your personalized loan options
               </p>
-              {/* Quick Link Bank Option */}
-              <button
-                onClick={() => setShowLinkModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 text-[#0891B2] rounded-lg hover:bg-cyan-100 transition-colors mb-8"
-              >
-                <span className="text-lg">🏦</span>
-                <span>Or link bank account to auto-fill</span>
-              </button>
             </div>
             <FormWizard onSubmit={handleFormSubmit} />
           </div>
@@ -371,29 +374,22 @@ export default function App() {
         
         {currentPage === 'profile' && (
           <ProfilePage
-            persona={selectedPersona}
+            linkedBanks={linkedBanks}
+            derivedProfile={derivedProfile}
+            user={user}
             onLinkAccount={() => setShowLinkModal(true)}
-            onUnlinkAccount={() => {
-              setSelectedPersona(null);
-              setUser(prev => prev ? { ...prev, credit_score: 650 } : null);
-            }}
+            onUnlinkBank={handleUnlinkBank}
           />
         )}
       </main>
       
       <Footer />
 
-      {/* Link Bank Account Modal */}
+      {/* Link Bank Account Modal - Only appears when explicitly requested */}
       {showLinkModal && (
         <LinkBankAccount
-          onSelectPersona={handleSelectPersona}
-          selectedPersonaId={selectedPersona?.id}
-          onClose={() => {
-            setShowLinkModal(false);
-            if (currentPage === 'login' || currentPage === 'register') {
-              setCurrentPage('check');
-            }
-          }}
+          onComplete={handleLinkBank}
+          onClose={() => setShowLinkModal(false)}
         />
       )}
     </div>
