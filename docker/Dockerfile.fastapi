@@ -1,0 +1,89 @@
+# =============================================================================
+# CreditWise FastAPI ML Service - Dockerfile
+# =============================================================================
+# Python ML service for credit risk predictions
+#
+# Build:   docker build -f docker/Dockerfile.fastapi -t creditwise-ml:latest .
+# Run:     docker run -p 8000:8000 creditwise-ml:latest
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Build Stage
+# -----------------------------------------------------------------------------
+FROM python:3.11-slim AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements first (for caching)
+COPY backend/requirements.txt ./requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# -----------------------------------------------------------------------------
+# Stage 2: Runtime Stage
+# -----------------------------------------------------------------------------
+FROM python:3.11-slim
+
+# Add labels
+LABEL maintainer="CreditWise Team"
+LABEL version="1.0.0"
+LABEL description="CreditWise FastAPI ML Service"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1001 appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application code
+COPY backend/app ./app
+COPY backend/run.py ./run.py
+COPY backend/init_db.py ./init_db.py
+COPY backend/seed_loans.py ./seed_loans.py
+
+# Create models directory (ML models will be mounted or copied separately)
+RUN mkdir -p ./models
+
+# Change ownership
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Run application
+CMD ["python", "run.py"]
+

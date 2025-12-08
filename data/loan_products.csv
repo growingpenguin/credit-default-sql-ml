@@ -1,0 +1,14 @@
+product_id,product_name,lender_name,loan_type,grade,min_credit_score,max_credit_score,min_apr,max_apr,min_amount,max_amount,terms_months,origination_fee_pct,description
+LC-A1-PERSONAL,Prime Personal Loan,LendingClub,personal,A,720,850,6.99,8.99,1000,40000,"36,60",1.0,Best rates for excellent credit. Fast funding within 24 hours.
+LC-A2-DEBT,Debt Consolidation Plus,LendingClub,debt_consolidation,A,720,850,5.99,7.99,5000,50000,"36,48,60",0.5,Consolidate high-interest debt into one low monthly payment.
+LC-B1-PERSONAL,Flexible Personal Loan,LendingClub,personal,B,680,719,10.49,13.99,1000,35000,"36,60",2.0,Competitive rates for good credit profiles.
+LC-B2-HOME,Home Improvement Loan,LendingClub,home,B,680,719,9.99,12.99,5000,45000,"36,48,60",1.5,Fund your home renovation projects with fixed monthly payments.
+LC-C1-PERSONAL,Standard Personal Loan,LendingClub,personal,C,660,679,14.99,18.99,1000,25000,"36,60",3.0,Personal loans for fair credit with no prepayment penalties.
+LC-C2-CAR,Auto Refinance Loan,LendingClub,car,C,660,679,13.99,17.49,5000,35000,"36,48,60",2.5,Refinance your auto loan and potentially lower your rate.
+LC-D1-PERSONAL,Credit Builder Loan,LendingClub,personal,D,640,659,19.99,23.99,1000,15000,"36,48",4.0,Build your credit history with on-time payments reported to bureaus.
+LC-E1-PERSONAL,Second Chance Loan,LendingClub,personal,E,620,639,24.99,28.99,1000,10000,36,5.0,A chance to get funding and rebuild your credit profile.
+SOFI-A1-PERSONAL,SoFi Personal Loan,SoFi,personal,A,720,850,8.99,12.99,5000,100000,"24,36,48,60,72,84",0.0,No fees. Unemployment protection included. Member benefits.
+PROSPER-B1-PERSONAL,Prosper Personal Loan,Prosper,personal,B,680,719,8.99,17.99,2000,50000,"36,60",2.4,Peer-to-peer lending with competitive rates.
+UPSTART-C1-PERSONAL,Upstart AI Loan,Upstart,personal,C,620,679,12.99,29.99,1000,50000,"36,60",4.0,AI-powered approval. Looks beyond credit score.
+MARCUS-A1-DEBT,Marcus Debt Consolidation,Marcus by Goldman Sachs,debt_consolidation,A,720,850,6.99,19.99,3500,40000,"36,48,60,72",0.0,No fees. Direct payment to creditors available.
+DISCOVER-B1-PERSONAL,Discover Personal Loan,Discover,personal,B,680,719,7.99,24.99,2500,35000,"36,48,60,72,84",0.0,No origination fees. Flexible terms up to 84 months.
