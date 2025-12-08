@@ -1,0 +1,83 @@
+# =============================================================================
+# CreditWise Ingress
+# =============================================================================
+# Routes external traffic to services via Nginx Ingress Controller
+# =============================================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: creditwise-ingress
+  namespace: creditwise
+  labels:
+    app.kubernetes.io/name: creditwise
+    app.kubernetes.io/component: ingress
+  annotations:
+    # Nginx Ingress Controller annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    # Enable CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: creditwise.local
+      http:
+        paths:
+          # Spring Boot API
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: spring-backend
+                port:
+                  number: 8080
+          # FastAPI ML predictions
+          - path: /predictions
+            pathType: Prefix
+            backend:
+              service:
+                name: fastapi-ml
+                port:
+                  number: 8000
+          # React Frontend (default)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+
+---
+# Optional: TLS Configuration (uncomment for HTTPS)
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: creditwise-ingress-tls
+#   namespace: creditwise
+#   annotations:
+#     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+# spec:
+#   tls:
+#     - hosts:
+#         - creditwise.example.com
+#       secretName: creditwise-tls
+#   rules:
+#     - host: creditwise.example.com
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: frontend
+#                 port:
+#                   number: 80
+

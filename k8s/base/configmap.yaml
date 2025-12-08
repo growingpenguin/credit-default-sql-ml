@@ -1,0 +1,83 @@
+# =============================================================================
+# CreditWise ConfigMaps
+# =============================================================================
+# Non-sensitive configuration for all services
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: creditwise-config
+  namespace: creditwise
+  labels:
+    app.kubernetes.io/name: creditwise
+    app.kubernetes.io/component: config
+data:
+  # Database configuration
+  POSTGRES_DB: "creditwise"
+  
+  # Spring Boot configuration
+  SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  SPRING_JPA_SHOW_SQL: "false"
+  
+  # FastAPI configuration
+  DEBUG: "false"
+  ALLOWED_ORIGINS: "http://localhost,http://creditwise.local"
+  
+  # ML Service URL (internal k8s DNS)
+  ML_SERVICE_URL: "http://fastapi-ml:8000"
+
+---
+# Nginx configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: creditwise
+data:
+  nginx.conf: |
+    worker_processes auto;
+    events {
+        worker_connections 1024;
+    }
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        upstream frontend {
+            server frontend:80;
+        }
+        upstream spring-backend {
+            server spring-backend:8080;
+        }
+        upstream fastapi-ml {
+            server fastapi-ml:8000;
+        }
+        
+        server {
+            listen 80;
+            server_name localhost;
+            
+            location /api/ {
+                proxy_pass http://spring-backend/api/;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+            
+            location /predictions/ {
+                proxy_pass http://fastapi-ml/predictions/;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+            }
+            
+            location / {
+                proxy_pass http://frontend;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+        }
+    }
+

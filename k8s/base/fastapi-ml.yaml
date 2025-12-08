@@ -1,0 +1,87 @@
+# =============================================================================
+# FastAPI ML Service
+# =============================================================================
+# Python ML service for credit risk predictions
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-ml
+  namespace: creditwise
+  labels:
+    app.kubernetes.io/name: fastapi-ml
+    app.kubernetes.io/component: ml-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fastapi-ml
+  template:
+    metadata:
+      labels:
+        app: fastapi-ml
+        app.kubernetes.io/name: fastapi-ml
+    spec:
+      containers:
+        - name: fastapi-ml
+          image: creditwise/fastapi-ml:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: creditwise-config
+            - secretRef:
+                name: creditwise-secrets
+            - secretRef:
+                name: database-url
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"  # ML models need more memory
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+          # Mount ML models if stored as PVC
+          volumeMounts:
+            - name: ml-models
+              mountPath: /app/models
+              readOnly: true
+      volumes:
+        - name: ml-models
+          emptyDir: {}  # Replace with PVC for production
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapi-ml
+  namespace: creditwise
+  labels:
+    app.kubernetes.io/name: fastapi-ml
+    app.kubernetes.io/component: ml-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  selector:
+    app: fastapi-ml
+

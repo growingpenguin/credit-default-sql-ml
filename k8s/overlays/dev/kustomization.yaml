@@ -1,0 +1,60 @@
+# =============================================================================
+# Development Environment Overlay
+# =============================================================================
+# Development-specific configurations
+# =============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: creditwise-dev
+
+# Base configuration
+resources:
+  - ../../base
+
+# Development namespace suffix
+nameSuffix: -dev
+
+# Development labels
+commonLabels:
+  environment: development
+
+# Patches for development
+patches:
+  # Reduce replicas for dev
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: spring-backend
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: fastapi-ml
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: frontend
+
+# Development-specific images (use local registry)
+images:
+  - name: creditwise/spring-backend
+    newName: localhost:5000/creditwise/spring-backend
+    newTag: dev
+  - name: creditwise/fastapi-ml
+    newName: localhost:5000/creditwise/fastapi-ml
+    newTag: dev
+  - name: creditwise/frontend
+    newName: localhost:5000/creditwise/frontend
+    newTag: dev
+
