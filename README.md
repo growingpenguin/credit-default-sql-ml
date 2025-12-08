@@ -240,6 +240,22 @@ credit-default-sql-ml/
 | GET | `/predictions/models` | Available models |
 | GET | `/predictions/health` | Service health |
 
+### WebSocket Endpoint (Real-time) ✨ NEW
+
+| Endpoint | Description |
+|----------|-------------|
+| `ws://localhost:8080/api/ws/predict` | Real-time ML predictions |
+
+**Client → Server:**
+```json
+{"type": "predict", "model": "tft", "features": {"LIMIT_BAL": 50000, ...}}
+```
+
+**Server → Client:**
+```json
+{"type": "prediction", "data": {"default_probability": 0.22, "risk_level": "Low"}, "latency_ms": 42}
+```
+
 ---
 
 ## 💳 Loan Products Database
@@ -435,7 +451,7 @@ Open http://localhost:8080/api/swagger-ui.html for interactive API testing.
 - [x] **Docker containerization** ✨ NEW
 - [x] **Integrate ML model into Spring Boot** ✨ NEW
 - [x] **Kubernetes deployment** ✨ NEW
-- [ ] Real-time prediction API (WebSocket)
+- [x] **Real-time prediction API (WebSocket)** ✨ NEW
 
 ---
 
