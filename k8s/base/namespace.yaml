@@ -1,0 +1,14 @@
+# =============================================================================
+# CreditWise Namespace
+# =============================================================================
+# Isolates all CreditWise resources in their own namespace
+# =============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: creditwise
+  labels:
+    app.kubernetes.io/name: creditwise
+    app.kubernetes.io/part-of: creditwise-platform
+
