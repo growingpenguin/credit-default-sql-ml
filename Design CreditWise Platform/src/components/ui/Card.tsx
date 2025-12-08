@@ -1,19 +1,22 @@
 import * as React from "react";
 import { cn } from "./utils";
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardProps {
+  className?: string;
   hoverable?: boolean;
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
-export function Card({ className, hoverable = false, children, ...props }: CardProps) {
+export function Card({ className, hoverable = false, children, style, ...props }: CardProps & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "bg-white rounded-xl shadow-md w-full",
+        "bg-white rounded-xl shadow-md w-full p-6",
         hoverable && "hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer",
         className
       )}
-      style={{ padding: '24px', boxSizing: 'border-box' }}
+      style={style}
       {...props}
     >
       {children}

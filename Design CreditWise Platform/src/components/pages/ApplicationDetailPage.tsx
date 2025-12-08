@@ -27,38 +27,38 @@ export function ApplicationDetailPage({ loanType, onApply, onBack }: Application
   const formatCurrency = (value: number) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="container mx-auto px-4 py-6">
       <button 
         onClick={onBack}
-        className="text-[#0891B2] hover:underline mb-6"
+        className="text-[#0891B2] hover:underline mb-4 text-sm font-medium"
       >
         ← Back to Dashboard
       </button>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column - Loan Details */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           {/* Header */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-[#1A365D]">Personal Loan</h2>
+          <div className="mb-2">
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-[#1A365D] text-2xl font-bold">Personal Loan</h2>
               <Badge variant="success">Pre-Qualified</Badge>
             </div>
-            <div className="flex items-center gap-2 text-[#64748B]">
+            <div className="flex items-center gap-2 text-[#64748B] text-sm">
               <span>CreditWise Partners</span>
               <span>•</span>
               <div className="flex items-center gap-1">
-                <Shield className="w-4 h-4 text-[#10B981]" />
+                <Shield className="w-3.5 h-3.5 text-[#10B981]" />
                 <span>Verified Lender</span>
               </div>
             </div>
           </div>
 
           {/* Loan Customization */}
-          <Card>
-            <h4 className="text-[#1A365D] mb-6">Customize Your Loan</h4>
+          <Card className="!p-5">
+            <h4 className="text-[#1A365D] text-lg font-semibold mb-4">Customize Your Loan</h4>
             
-            <div className="space-y-8">
+            <div className="space-y-5">
               <Slider
                 label="Loan Amount"
                 min={1000}
@@ -80,46 +80,46 @@ export function ApplicationDetailPage({ loanType, onApply, onBack }: Application
               />
 
               {/* Key Terms */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-gray-200">
                 <div>
-                  <p className="text-[#64748B] mb-1">Interest Rate (APR)</p>
-                  <p className="text-[#1A365D]">7.9%</p>
+                  <p className="text-[#64748B] text-xs mb-0.5">Interest Rate (APR)</p>
+                  <p className="text-[#1A365D] font-medium">7.9%</p>
                 </div>
                 <div>
-                  <p className="text-[#64748B] mb-1">Monthly Payment</p>
-                  <p className="text-[#0891B2]">{formatCurrency(monthlyPayment)}</p>
+                  <p className="text-[#64748B] text-xs mb-0.5">Monthly Payment</p>
+                  <p className="text-[#0891B2] font-semibold">{formatCurrency(monthlyPayment)}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748B] mb-1">Total Interest</p>
-                  <p className="text-[#1A365D]">{formatCurrency(totalInterest)}</p>
+                  <p className="text-[#64748B] text-xs mb-0.5">Total Interest</p>
+                  <p className="text-[#1A365D] font-medium">{formatCurrency(totalInterest)}</p>
                 </div>
                 <div>
-                  <p className="text-[#64748B] mb-1">Total Repayment</p>
-                  <p className="text-[#1A365D]">{formatCurrency(totalRepayment)}</p>
+                  <p className="text-[#64748B] text-xs mb-0.5">Total Repayment</p>
+                  <p className="text-[#1A365D] font-medium">{formatCurrency(totalRepayment)}</p>
                 </div>
               </div>
             </div>
           </Card>
 
           {/* Amortization Preview */}
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h5 className="text-[#1A365D]">Repayment Schedule Preview</h5>
-              <button className="text-[#0891B2] hover:underline">
-                <Download className="w-4 h-4 inline mr-1" />
+          <Card className="!p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h5 className="text-[#1A365D] font-semibold">Repayment Schedule Preview</h5>
+              <button className="text-[#0891B2] hover:underline text-sm flex items-center gap-1">
+                <Download className="w-3.5 h-3.5" />
                 Download Full Schedule
               </button>
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 text-[#64748B]">Month</th>
-                    <th className="text-right py-3 text-[#64748B]">Payment</th>
-                    <th className="text-right py-3 text-[#64748B]">Principal</th>
-                    <th className="text-right py-3 text-[#64748B]">Interest</th>
-                    <th className="text-right py-3 text-[#64748B]">Balance</th>
+                    <th className="text-left py-2 text-[#64748B] font-medium">Month</th>
+                    <th className="text-right py-2 text-[#64748B] font-medium">Payment</th>
+                    <th className="text-right py-2 text-[#64748B] font-medium">Principal</th>
+                    <th className="text-right py-2 text-[#64748B] font-medium">Interest</th>
+                    <th className="text-right py-2 text-[#64748B] font-medium">Balance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -129,12 +129,12 @@ export function ApplicationDetailPage({ loanType, onApply, onBack }: Application
                     const balance = loanAmount - (principal * month);
                     
                     return (
-                      <tr key={month} className="border-b border-gray-100">
-                        <td className="py-3 text-[#1A365D]">{month}</td>
-                        <td className="text-right py-3 text-[#1A365D]">{formatCurrency(monthlyPayment)}</td>
-                        <td className="text-right py-3 text-[#64748B]">{formatCurrency(principal)}</td>
-                        <td className="text-right py-3 text-[#64748B]">{formatCurrency(interest)}</td>
-                        <td className="text-right py-3 text-[#1A365D]">{formatCurrency(balance)}</td>
+                      <tr key={month} className="border-b border-gray-100 last:border-0">
+                        <td className="py-2 text-[#1A365D]">{month}</td>
+                        <td className="text-right py-2 text-[#1A365D] font-medium">{formatCurrency(monthlyPayment)}</td>
+                        <td className="text-right py-2 text-[#64748B]">{formatCurrency(principal)}</td>
+                        <td className="text-right py-2 text-[#64748B]">{formatCurrency(interest)}</td>
+                        <td className="text-right py-2 text-[#1A365D]">{formatCurrency(balance)}</td>
                       </tr>
                     );
                   })}
@@ -144,17 +144,17 @@ export function ApplicationDetailPage({ loanType, onApply, onBack }: Application
           </Card>
 
           {/* Required Documents */}
-          <Card>
-            <h5 className="text-[#1A365D] mb-4">Required Documents</h5>
-            <div className="space-y-3">
+          <Card className="!p-5">
+            <h5 className="text-[#1A365D] font-semibold mb-3">Required Documents</h5>
+            <div className="space-y-2">
               {[
                 'Valid government-issued ID',
                 'Proof of income (pay stubs or tax returns)',
                 'Bank statements (last 3 months)',
                 'Proof of address',
               ].map((doc, index) => (
-                <div key={index} className="flex items-center gap-3 text-[#64748B]">
-                  <FileText className="w-5 h-5 text-[#0891B2]" />
+                <div key={index} className="flex items-center gap-2 text-[#64748B] text-sm">
+                  <FileText className="w-4 h-4 text-[#0891B2]" />
                   <span>{doc}</span>
                 </div>
               ))}
@@ -163,45 +163,45 @@ export function ApplicationDetailPage({ loanType, onApply, onBack }: Application
         </div>
 
         {/* Right Column - Summary & Actions */}
-        <div className="space-y-6">
+        <div>
           {/* Summary Card */}
-          <Card className="sticky top-24">
-            <h5 className="text-[#1A365D] mb-6">Application Summary</h5>
+          <Card className="sticky top-20 !p-5">
+            <h5 className="text-[#1A365D] font-semibold mb-4">Application Summary</h5>
             
             {/* Approval Probability */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[#64748B]">Approval Probability</span>
-                <span className="text-[#10B981]">87%</span>
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[#64748B] text-sm">Approval Probability</span>
+                <span className="text-[#10B981] font-bold">87%</span>
               </div>
               <ProgressBar value={87} color="success" />
-              <p className="text-[#64748B] mt-2">
+              <p className="text-[#64748B] text-xs mt-1.5">
                 Based on your credit profile
               </p>
             </div>
 
             {/* Key Details */}
-            <div className="space-y-4 py-4 border-y border-gray-200">
-              <div className="flex justify-between">
+            <div className="space-y-2.5 py-3 border-y border-gray-200">
+              <div className="flex justify-between text-sm">
                 <span className="text-[#64748B]">Loan Amount</span>
-                <span className="text-[#1A365D]">{formatCurrency(loanAmount)}</span>
+                <span className="text-[#1A365D] font-medium">{formatCurrency(loanAmount)}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <span className="text-[#64748B]">Monthly Payment</span>
-                <span className="text-[#0891B2]">{formatCurrency(monthlyPayment)}</span>
+                <span className="text-[#0891B2] font-semibold">{formatCurrency(monthlyPayment)}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <span className="text-[#64748B]">Loan Term</span>
-                <span className="text-[#1A365D]">{loanTerm} months</span>
+                <span className="text-[#1A365D] font-medium">{loanTerm} months</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <span className="text-[#64748B]">Interest Rate</span>
-                <span className="text-[#1A365D]">7.9% APR</span>
+                <span className="text-[#1A365D] font-medium">7.9% APR</span>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="space-y-3 mt-6">
+            <div className="space-y-2 mt-4">
               <Button className="w-full" onClick={onApply}>
                 Apply Now
               </Button>
@@ -211,21 +211,21 @@ export function ApplicationDetailPage({ loanType, onApply, onBack }: Application
             </div>
 
             {/* Trust Badges */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex items-center gap-2 text-[#64748B] mb-3">
-                <Shield className="w-5 h-5 text-[#10B981]" />
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+              <div className="flex items-center gap-2 text-[#64748B] text-xs">
+                <Shield className="w-4 h-4 text-[#10B981]" />
                 <span>256-bit SSL Encryption</span>
               </div>
-              <div className="flex items-center gap-2 text-[#64748B]">
-                <CheckCircle className="w-5 h-5 text-[#10B981]" />
+              <div className="flex items-center gap-2 text-[#64748B] text-xs">
+                <CheckCircle className="w-4 h-4 text-[#10B981]" />
                 <span>FDIC Member Bank</span>
               </div>
             </div>
 
             {/* Support */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <button className="flex items-center gap-2 text-[#0891B2] hover:underline">
-                <MessageCircle className="w-5 h-5" />
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button className="flex items-center gap-2 text-[#0891B2] hover:underline text-sm">
+                <MessageCircle className="w-4 h-4" />
                 <span>Questions? Chat with us</span>
               </button>
             </div>
