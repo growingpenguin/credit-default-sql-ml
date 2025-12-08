@@ -1,0 +1,161 @@
+# =============================================================================
+# CreditWise Full Stack - Docker Compose
+# =============================================================================
+# Orchestrates all services:
+#   - PostgreSQL Database
+#   - Spring Boot Backend (Java)
+#   - FastAPI ML Service (Python)
+#   - React Frontend
+#   - Nginx Reverse Proxy
+#
+# Usage:
+#   docker-compose -f docker/docker-compose.yml up -d
+#   docker-compose -f docker/docker-compose.yml logs -f
+#   docker-compose -f docker/docker-compose.yml down
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # PostgreSQL Database
+  # ===========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: creditwise-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: creditwise
+      POSTGRES_USER: creditwise
+      POSTGRES_PASSWORD: creditwise_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - creditwise-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U creditwise -d creditwise"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # Spring Boot Backend (Java)
+  # ===========================================================================
+  spring-backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.spring
+    container_name: creditwise-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database connection
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/creditwise
+      SPRING_DATASOURCE_USERNAME: creditwise
+      SPRING_DATASOURCE_PASSWORD: creditwise_password
+      # JWT secret (change in production!)
+      JWT_SECRET: Y3JlZGl0d2lzZS1zdXBlci1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==
+      # JPA settings
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "false"
+    ports:
+      - "8080:8080"
+    networks:
+      - creditwise-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # ===========================================================================
+  # FastAPI ML Service (Python)
+  # ===========================================================================
+  fastapi-ml:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.fastapi
+    container_name: creditwise-ml
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://creditwise:creditwise_password@postgres:5432/creditwise
+      SECRET_KEY: creditwise-super-secret-key-change-in-production
+      DEBUG: "false"
+      ALLOWED_ORIGINS: http://localhost,http://localhost:3000,http://nginx
+    ports:
+      - "8000:8000"
+    networks:
+      - creditwise-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  # ===========================================================================
+  # React Frontend
+  # ===========================================================================
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: creditwise-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - creditwise-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # Nginx Reverse Proxy
+  # ===========================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: creditwise-nginx
+    restart: unless-stopped
+    depends_on:
+      - spring-backend
+      - fastapi-ml
+      - frontend
+    volumes:
+      - ./nginx.docker.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - creditwise-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  creditwise-network:
+    driver: bridge
+    name: creditwise-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    name: creditwise-postgres-data
+
