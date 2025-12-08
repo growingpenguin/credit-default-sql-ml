@@ -434,7 +434,7 @@ Open http://localhost:8080/api/swagger-ui.html for interactive API testing.
 - [x] **Nginx reverse proxy** ✨ NEW
 - [x] **Docker containerization** ✨ NEW
 - [x] **Integrate ML model into Spring Boot** ✨ NEW
-- [ ] Kubernetes deployment
+- [x] **Kubernetes deployment** ✨ NEW
 - [ ] Real-time prediction API (WebSocket)
 
 ---
