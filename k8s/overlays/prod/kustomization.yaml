@@ -1,0 +1,79 @@
+# =============================================================================
+# Production Environment Overlay
+# =============================================================================
+# Production-specific configurations with higher resources
+# =============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: creditwise-prod
+
+# Base configuration
+resources:
+  - ../../base
+
+# Production labels
+commonLabels:
+  environment: production
+
+# Production patches
+patches:
+  # Increase replicas for production
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: Deployment
+      name: spring-backend
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: Deployment
+      name: fastapi-ml
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      name: frontend
+  
+  # Increase resources for production
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 2Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 2000m
+    target:
+      kind: Deployment
+      name: spring-backend
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 4Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 2000m
+    target:
+      kind: Deployment
+      name: fastapi-ml
+
+# Production images (use Docker Hub or private registry)
+images:
+  - name: creditwise/spring-backend
+    newName: ghcr.io/growingpenguin/creditwise-spring-backend
+    newTag: v1.0.0
+  - name: creditwise/fastapi-ml
+    newName: ghcr.io/growingpenguin/creditwise-fastapi-ml
+    newTag: v1.0.0
+  - name: creditwise/frontend
+    newName: ghcr.io/growingpenguin/creditwise-frontend
+    newTag: v1.0.0
+

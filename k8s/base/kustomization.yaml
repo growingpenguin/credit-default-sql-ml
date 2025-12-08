@@ -1,0 +1,41 @@
+# =============================================================================
+# Kustomize Base Configuration
+# =============================================================================
+# Base resources for CreditWise platform
+# Use overlays (dev/prod) for environment-specific configurations
+# =============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: creditwise-base
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/part-of: creditwise-platform
+  app.kubernetes.io/managed-by: kustomize
+
+# Resources to include
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - postgres.yaml
+  - spring-backend.yaml
+  - fastapi-ml.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+# Images (can be overridden in overlays)
+images:
+  - name: creditwise/spring-backend
+    newName: creditwise/spring-backend
+    newTag: latest
+  - name: creditwise/fastapi-ml
+    newName: creditwise/fastapi-ml
+    newTag: latest
+  - name: creditwise/frontend
+    newName: creditwise/frontend
+    newTag: latest
+
