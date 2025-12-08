@@ -9,10 +9,11 @@ interface LoginPageProps {
   onLogin: (email: string, password: string) => Promise<void>;
   onRegister: (email: string, password: string, fullName: string) => Promise<void>;
   onSwitchMode: () => void;
+  onForgotPassword?: () => void;
   error: string | null;
 }
 
-export function LoginPage({ mode, onLogin, onRegister, onSwitchMode, error }: LoginPageProps) {
+export function LoginPage({ mode, onLogin, onRegister, onSwitchMode, onForgotPassword, error }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -188,9 +189,13 @@ export function LoginPage({ mode, onLogin, onRegister, onSwitchMode, error }: Lo
             )}
 
             {/* Forgot Password (Login only) */}
-            {!isRegister && (
+            {!isRegister && onForgotPassword && (
               <div className="text-right">
-                <button type="button" className="text-[#0891B2] hover:underline text-sm">
+                <button 
+                  type="button" 
+                  onClick={onForgotPassword}
+                  className="text-[#0891B2] hover:underline text-sm"
+                >
                   Forgot password?
                 </button>
               </div>
