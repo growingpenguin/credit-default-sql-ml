@@ -222,12 +222,23 @@ credit-default-sql-ml/
 | GET | `/api/loans/recommendations` | Personalized recommendations | ✅ |
 | GET | `/api/loans/calculate-payment` | Payment calculator | ❌ |
 
+#### ML Predictions ✨ NEW
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/predictions/models` | List available ML models | ❌ |
+| GET | `/api/predictions/sample` | Test with sample data | ❌ |
+| GET | `/api/predictions/health` | ML service status | ❌ |
+| GET | `/api/predictions/my-risk` | Your risk prediction | ✅ |
+| POST | `/api/predictions/predict` | Custom prediction | ❌ |
+| POST | `/api/predictions/compare` | Compare all models | ❌ |
+
 ### FastAPI ML Service (Port 8000)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/ml/predict` | Credit risk prediction |
-| GET | `/ml/models` | Available models |
+| POST | `/predictions/predict` | Credit risk prediction |
+| GET | `/predictions/models` | Available models |
+| GET | `/predictions/health` | Service health |
 
 ---
 
@@ -422,9 +433,9 @@ Open http://localhost:8080/api/swagger-ui.html for interactive API testing.
 - [x] **Spring Boot backend (Java)** ✨ NEW
 - [x] **Nginx reverse proxy** ✨ NEW
 - [x] **Docker containerization** ✨ NEW
-- [ ] Integrate trained ML model into Spring Boot
+- [x] **Integrate ML model into Spring Boot** ✨ NEW
 - [ ] Kubernetes deployment
-- [ ] Real-time prediction API
+- [ ] Real-time prediction API (WebSocket)
 
 ---
 
