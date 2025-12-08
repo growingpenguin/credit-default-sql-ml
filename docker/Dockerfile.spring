@@ -1,0 +1,74 @@
+# =============================================================================
+# CreditWise Spring Boot Backend - Dockerfile
+# =============================================================================
+# Multi-stage build for optimized production image
+#
+# Build:   docker build -f docker/Dockerfile.spring -t creditwise-api:latest .
+# Run:     docker run -p 8080:8080 creditwise-api:latest
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Build Stage
+# -----------------------------------------------------------------------------
+# Use ARM64 compatible image
+FROM maven:3.9-eclipse-temurin-17 AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy Maven configuration first (for dependency caching)
+COPY spring-backend/pom.xml ./pom.xml
+COPY spring-backend/mvnw ./mvnw
+COPY spring-backend/.mvn ./.mvn
+
+# Download dependencies (cached layer if pom.xml unchanged)
+RUN mvn dependency:go-offline -B
+
+# Copy source code
+COPY spring-backend/src ./src
+
+# Build the application (skip tests for faster build)
+RUN mvn clean package -DskipTests -B
+
+# -----------------------------------------------------------------------------
+# Stage 2: Runtime Stage
+# -----------------------------------------------------------------------------
+# Use ARM64 compatible image
+FROM eclipse-temurin:17-jre
+
+# Add labels for image metadata
+LABEL maintainer="CreditWise Team"
+LABEL version="1.0.0"
+LABEL description="CreditWise Spring Boot API"
+
+# Install curl for health check and create non-root user
+RUN apt-get update && apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd -g 1001 appgroup && \
+    useradd -u 1001 -g appgroup -m appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy JAR from builder stage
+COPY --from=builder /app/target/creditwise-api-*.jar app.jar
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD curl --fail --silent http://localhost:8080/api/health || exit 1
+
+# JVM optimization for containers
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
+
+# Run application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+
