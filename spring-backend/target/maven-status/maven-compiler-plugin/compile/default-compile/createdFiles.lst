@@ -1,6 +1,7 @@
 com/creditwise/dto/FinancialProfileRequest.class
 com/creditwise/controller/HealthController.class
 com/creditwise/controller/LoanController.class
+com/creditwise/config/WebSocketConfig.class
 com/creditwise/service/MLPredictionService$MLModel.class
 com/creditwise/dto/AuthRequest.class
 com/creditwise/dto/MLPredictionRequest$MLPredictionRequestBuilder.class
@@ -40,4 +41,5 @@ com/creditwise/dto/LoanRecommendationResponse$PersonalizedLoan$PersonalizedLoanB
 com/creditwise/dto/CreditScoreResponse$CreditScoreResponseBuilder.class
 com/creditwise/dto/LoanProductResponse$LoanProductResponseBuilder.class
 com/creditwise/dto/AuthResponse.class
+com/creditwise/websocket/PredictionWebSocketHandler.class
 com/creditwise/dto/UserResponse.class
