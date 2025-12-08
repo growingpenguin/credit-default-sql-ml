@@ -1,8 +1,11 @@
+/Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/service/MLPredictionService.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/repository/LoanProductRepository.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/config/SecurityConfig.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/UserResponse.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/LoanProductResponse.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/service/AuthService.java
+/Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/MLPredictionResponse.java
+/Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/controller/PredictionController.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/entity/User.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/security/JwtAuthenticationFilter.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/repository/UserRepository.java
@@ -21,5 +24,6 @@
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/CreditScoreResponse.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/security/JwtTokenProvider.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/AuthRequest.java
+/Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/MLPredictionRequest.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/LoanRecommendationResponse.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/controller/HealthController.java

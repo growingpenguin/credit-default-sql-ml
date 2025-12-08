@@ -46,6 +46,12 @@ public class SecurityConfig {
                 .requestMatchers("/loans/calculate-payment").permitAll()
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/").permitAll()
+                // ML Prediction endpoints (some public, some protected)
+                .requestMatchers("/predictions/models/**").permitAll()
+                .requestMatchers("/predictions/sample").permitAll()
+                .requestMatchers("/predictions/health").permitAll()
+                .requestMatchers("/predictions/predict").permitAll()
+                .requestMatchers("/predictions/compare").permitAll()
                 // Swagger endpoints
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/api-docs/**").permitAll()
