@@ -205,10 +205,13 @@ class ApiClient {
   // ===========================================================================
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>('/auth/register', {
+    const rawResponse = await this.request<any>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    
+    // Handle both Spring Boot (accessToken) and FastAPI (access_token) formats
+    const response = this.normalizeAuthResponse(rawResponse);
     
     setToken(response.access_token);
     setStoredUser(response.user);
@@ -217,15 +220,51 @@ class ApiClient {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>('/auth/login', {
+    const rawResponse = await this.request<any>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
+    
+    // Handle both Spring Boot (accessToken) and FastAPI (access_token) formats
+    const response = this.normalizeAuthResponse(rawResponse);
     
     setToken(response.access_token);
     setStoredUser(response.user);
     
     return response;
+  }
+  
+  /**
+   * Normalize auth response to handle different backend formats.
+   * Spring Boot: accessToken, fullName (camelCase)
+   * FastAPI: access_token, full_name (snake_case)
+   */
+  private normalizeAuthResponse(raw: any): AuthResponse {
+    // Handle token field
+    const accessToken = raw.access_token || raw.accessToken;
+    const tokenType = raw.token_type || raw.tokenType || 'bearer';
+    
+    // Handle user field - normalize to snake_case
+    const rawUser = raw.user || {};
+    const user: User = {
+      id: rawUser.id,
+      email: rawUser.email,
+      full_name: rawUser.full_name || rawUser.fullName || '',
+      is_active: rawUser.is_active ?? rawUser.isActive ?? true,
+      is_verified: rawUser.is_verified ?? rawUser.isVerified ?? false,
+      credit_score: rawUser.credit_score ?? rawUser.creditScore ?? null,
+      default_probability: rawUser.default_probability ?? rawUser.defaultProbability ?? null,
+      created_at: rawUser.created_at || rawUser.createdAt,
+      annual_income: rawUser.annual_income ?? rawUser.annualIncome ?? null,
+      credit_limit: rawUser.credit_limit ?? rawUser.creditLimit ?? null,
+      credit_utilization: rawUser.credit_utilization ?? rawUser.creditUtilization ?? null,
+    };
+    
+    return {
+      access_token: accessToken,
+      token_type: tokenType,
+      user,
+    };
   }
 
   async logout(): Promise<void> {
@@ -249,16 +288,34 @@ class ApiClient {
   }
 
   async updateFinancialProfile(profile: FinancialProfile): Promise<UserProfile> {
+    // Convert snake_case to camelCase for Spring Boot
+    const camelCaseProfile = {
+      annualIncome: profile.annual_income,
+      monthlyExpenses: profile.monthly_expenses,
+      creditLimit: profile.credit_limit,
+      creditAccounts: profile.credit_accounts,
+      paymentFrequency: profile.payment_frequency,
+      longestDelay: profile.longest_delay,
+      creditUtilization: profile.credit_utilization,
+    };
+    
     return this.request<UserProfile>('/users/profile/financial', {
       method: 'PUT',
-      body: JSON.stringify(profile),
+      body: JSON.stringify(camelCaseProfile),
     });
   }
 
   async updateLoanPreferences(preferences: LoanPreferences): Promise<UserProfile> {
+    // Convert snake_case to camelCase for Spring Boot
+    const camelCasePrefs = {
+      desiredLoanAmount: preferences.desired_loan_amount,
+      loanPurpose: preferences.loan_purpose,
+      repaymentPeriod: preferences.repayment_period,
+    };
+    
     return this.request<UserProfile>('/users/profile/loan-preferences', {
       method: 'PUT',
-      body: JSON.stringify(preferences),
+      body: JSON.stringify(camelCasePrefs),
     });
   }
 
@@ -267,13 +324,27 @@ class ApiClient {
   // ===========================================================================
 
   async calculateCreditScore(): Promise<CreditScoreResponse> {
-    return this.request<CreditScoreResponse>('/users/calculate-score', {
+    const raw = await this.request<any>('/users/calculate-score', {
       method: 'POST',
     });
+    // Normalize camelCase to snake_case
+    return {
+      credit_score: raw.credit_score ?? raw.creditScore,
+      score_label: raw.score_label ?? raw.scoreLabel,
+      default_probability: raw.default_probability ?? raw.defaultProbability,
+      risk_level: raw.risk_level ?? raw.riskLevel,
+    };
   }
 
   async getCreditScore(): Promise<CreditScoreResponse> {
-    return this.request<CreditScoreResponse>('/users/credit-score');
+    const raw = await this.request<any>('/users/credit-score');
+    // Normalize camelCase to snake_case
+    return {
+      credit_score: raw.credit_score ?? raw.creditScore,
+      score_label: raw.score_label ?? raw.scoreLabel,
+      default_probability: raw.default_probability ?? raw.defaultProbability,
+      risk_level: raw.risk_level ?? raw.riskLevel,
+    };
   }
 
   // ===========================================================================
@@ -282,11 +353,13 @@ class ApiClient {
 
   async getAllLoanProducts(loanType?: string): Promise<LoanProduct[]> {
     const params = loanType ? `?loan_type=${loanType}` : '';
-    return this.request<LoanProduct[]>(`/loans/products${params}`);
+    const raw = await this.request<any[]>(`/loans/products${params}`);
+    return raw.map(this.normalizeLoanProduct);
   }
 
   async getLoanProduct(productId: string): Promise<LoanProduct> {
-    return this.request<LoanProduct>(`/loans/products/${productId}`);
+    const raw = await this.request<any>(`/loans/products/${productId}`);
+    return this.normalizeLoanProduct(raw);
   }
 
   async getLoanRecommendations(
@@ -300,7 +373,44 @@ class ApiClient {
     params.append('term_months', termMonths.toString());
     
     const queryString = params.toString() ? `?${params.toString()}` : '';
-    return this.request<LoanRecommendations>(`/loans/recommendations${queryString}`);
+    const raw = await this.request<any>(`/loans/recommendations${queryString}`);
+    
+    // Normalize response from camelCase to snake_case
+    return {
+      credit_score: raw.credit_score ?? raw.creditScore,
+      total_products: raw.total_products ?? raw.totalProducts,
+      recommendations: (raw.recommendations || []).map((r: any) => ({
+        product: this.normalizeLoanProduct(r.product),
+        estimated_apr: r.estimated_apr ?? r.estimatedApr,
+        approval_probability: r.approval_probability ?? r.approvalProbability,
+        monthly_payment: r.monthly_payment ?? r.monthlyPayment ?? null,
+        is_pre_qualified: r.is_pre_qualified ?? r.isPreQualified,
+        is_best_match: r.is_best_match ?? r.isBestMatch,
+      })),
+    };
+  }
+  
+  /**
+   * Normalize loan product from camelCase to snake_case
+   */
+  private normalizeLoanProduct(raw: any): LoanProduct {
+    return {
+      id: raw.id,
+      product_id: raw.product_id ?? raw.productId,
+      product_name: raw.product_name ?? raw.productName,
+      lender_name: raw.lender_name ?? raw.lenderName,
+      loan_type: raw.loan_type ?? raw.loanType,
+      grade: raw.grade,
+      description: raw.description,
+      min_credit_score: raw.min_credit_score ?? raw.minCreditScore,
+      max_credit_score: raw.max_credit_score ?? raw.maxCreditScore,
+      min_apr: raw.min_apr ?? raw.minApr,
+      max_apr: raw.max_apr ?? raw.maxApr,
+      min_amount: raw.min_amount ?? raw.minAmount,
+      max_amount: raw.max_amount ?? raw.maxAmount,
+      terms_months: raw.terms_months ?? raw.termsMonths,
+      origination_fee_pct: raw.origination_fee_pct ?? raw.originationFeePct,
+    };
   }
 
   async calculateLoanPayment(

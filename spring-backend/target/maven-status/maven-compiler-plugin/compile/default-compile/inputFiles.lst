@@ -7,6 +7,7 @@
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/MLPredictionResponse.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/controller/PredictionController.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/entity/User.java
+/Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/LoanPreferencesRequest.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/security/JwtAuthenticationFilter.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/repository/UserRepository.java
 /Users/growingpenguin/Workspace/credit-default-sql-ml/spring-backend/src/main/java/com/creditwise/dto/FinancialProfileRequest.java
