@@ -17,6 +17,8 @@ A **full-stack mini bank application** where customers can check loan eligibilit
 | **Database** | PostgreSQL | Robust relational data storage |
 | **ML Models** | PyTorch (TFT, LSTM, SAINT) | State-of-the-art credit risk prediction |
 | **Loan Data** | LendingClub | Real APR rates from 6 lenders |
+| **Bank Linking** | Plaid-like Flow | Connect bank accounts (simulated) |
+| **Auth Features** | JWT + Password Reset | Secure login with forgot password |
 
 ---
 
@@ -155,9 +157,17 @@ credit-default-sql-ml/
 │   ├── src/
 │   │   ├── components/                   # UI components
 │   │   │   ├── pages/                    # Page components
+│   │   │   │   ├── LoginPage.tsx         # Login & Registration
+│   │   │   │   ├── DashboardPage.tsx     # Credit score & loans
+│   │   │   │   ├── ProfilePage.tsx       # User profile & linked banks
+│   │   │   │   ├── ForgotPasswordPage.tsx # Password reset request
+│   │   │   │   └── ResetPasswordPage.tsx  # New password entry
+│   │   │   ├── LinkBankAccount.tsx       # Plaid-like bank linking modal
 │   │   │   ├── charts/                   # Credit score gauge
 │   │   │   ├── layout/                   # Header, Footer
 │   │   │   └── ui/                       # Reusable UI
+│   │   ├── data/
+│   │   │   └── bankProviders.ts          # Bank options & account generation
 │   │   ├── services/
 │   │   │   └── api.ts                    # API client
 │   │   └── App.tsx                       # Main application
@@ -255,6 +265,63 @@ credit-default-sql-ml/
 ```json
 {"type": "prediction", "data": {"default_probability": 0.22, "risk_level": "Low"}, "latency_ms": 42}
 ```
+
+---
+
+## 🏦 Bank Account Linking (Plaid-like)
+
+The app features a **realistic bank account linking flow** similar to Plaid:
+
+### Flow
+```
+Profile Page → "Link Bank Account" → Select Bank → Login → Select Accounts → Done
+```
+
+### Supported Banks (Demo)
+| Bank | Logo | Features |
+|------|------|----------|
+| Chase | 🏦 | Checking, Savings, Credit |
+| Bank of America | 🔴 | Checking, Savings, Credit |
+| Wells Fargo | 🟡 | Checking, Savings, Credit |
+| Citibank | 🔵 | Checking, Savings, Credit |
+| U.S. Bank | 🏛️ | Checking, Savings, Credit |
+| Capital One | 💳 | Checking, Savings, Credit |
+
+### Auto-Generated Data
+When you "link" a bank account, the system generates realistic:
+- **Checking accounts**: $2,500 - $15,000 balance
+- **Savings accounts**: $5,000 - $50,000 balance  
+- **Credit cards**: 0-60% utilization, 15-25% APR
+
+### Derived Financial Profile
+The app calculates from linked accounts:
+- Total cash balance
+- Credit utilization percentage
+- Estimated credit score
+- Estimated annual income
+
+---
+
+## 🔐 Authentication Features
+
+### Login & Registration
+- Email/password authentication
+- JWT token-based sessions
+- Secure password hashing (BCrypt)
+
+### Forgot Password Flow ✨ NEW
+```
+Login Page → "Forgot Password?" → Enter Email → Check Inbox → Reset Password
+```
+
+1. **Request Reset**: User enters email address
+2. **Simulated Email**: Shows confirmation (demo mode)
+3. **Reset Password**: Password strength validation with:
+   - Minimum 8 characters
+   - Uppercase letter required
+   - Number required
+   - Special character required
+4. **Success**: Redirects to login
 
 ---
 
@@ -446,12 +513,16 @@ Open http://localhost:8080/api/swagger-ui.html for interactive API testing.
 - [x] FastAPI backend (Python ML service)
 - [x] PostgreSQL database integration
 - [x] LendingClub loan products data
-- [x] **Spring Boot backend (Java)** ✨ NEW
-- [x] **Nginx reverse proxy** ✨ NEW
-- [x] **Docker containerization** ✨ NEW
-- [x] **Integrate ML model into Spring Boot** ✨ NEW
-- [x] **Kubernetes deployment** ✨ NEW
-- [x] **Real-time prediction API (WebSocket)** ✨ NEW
+- [x] Spring Boot backend (Java)
+- [x] Nginx reverse proxy
+- [x] Docker containerization
+- [x] Integrate ML model into Spring Boot
+- [x] Kubernetes deployment manifests
+- [x] Real-time prediction API (WebSocket)
+- [x] **Plaid-like bank account linking** ✨ NEW
+- [x] **Forgot password flow** ✨ NEW
+- [x] **Profile page with linked accounts** ✨ NEW
+- [x] **UI spacing & typography improvements** ✨ NEW
 
 ---
 
