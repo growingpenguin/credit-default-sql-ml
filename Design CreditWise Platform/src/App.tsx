@@ -8,6 +8,10 @@ import { ApplicationTrackerPage } from './components/pages/ApplicationTrackerPag
 import { ProfilePage } from './components/pages/ProfilePage';
 import { FormWizard } from './components/FormWizard';
 import { LoginPage } from './components/pages/LoginPage';
+import { ForgotPasswordPage } from './components/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
+import { LinkBankAccount } from './components/LinkBankAccount';
+import { CustomerPersona, CUSTOMER_PERSONAS } from './data/mockBankAccounts';
 import { 
   api, 
   User, 
@@ -17,7 +21,7 @@ import {
   FinancialProfile 
 } from './services/api';
 
-type Page = 'landing' | 'login' | 'register' | 'check' | 'dashboard' | 'apply' | 'detail' | 'tracker' | 'profile';
+type Page = 'landing' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'check' | 'dashboard' | 'apply' | 'detail' | 'tracker' | 'profile';
 
 interface UserData {
   name: string;
@@ -32,6 +36,13 @@ export default function App() {
   const [selectedLoan, setSelectedLoan] = useState('personal');
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Mock bank account state
+  const [selectedPersona, setSelectedPersona] = useState<CustomerPersona | null>(null);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  
+  // Password reset state
+  const [resetToken, setResetToken] = useState<string | null>(null);
 
   // Check authentication on app load
   useEffect(() => {
@@ -58,7 +69,13 @@ export default function App() {
       const response = await api.login({ email, password });
       setUser(response.user);
       setIsLoggedIn(true);
-      setCurrentPage('dashboard');
+      
+      // If no persona linked, show link modal, otherwise go to dashboard
+      if (!selectedPersona) {
+        setShowLinkModal(true);
+      } else {
+        setCurrentPage('dashboard');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
@@ -72,7 +89,8 @@ export default function App() {
       const response = await api.register({ email, password, full_name: fullName });
       setUser(response.user);
       setIsLoggedIn(true);
-      setCurrentPage('check'); // Go to form wizard after registration
+      // Show link bank account after registration
+      setShowLinkModal(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
       throw err;
@@ -88,12 +106,45 @@ export default function App() {
     } finally {
       setUser(null);
       setIsLoggedIn(false);
+      setSelectedPersona(null);
       setCurrentPage('landing');
       removeToken();
     }
   };
 
-  // Handle form wizard submission
+  // Handle persona selection (simulated bank account linking)
+  const handleSelectPersona = async (persona: CustomerPersona) => {
+    setSelectedPersona(persona);
+    setShowLinkModal(false);
+    
+    // Update user with persona data
+    setUser(prev => prev ? {
+      ...prev,
+      full_name: persona.name,
+      credit_score: persona.expectedCreditScore,
+      default_probability: persona.expectedDefaultProb,
+    } : null);
+
+    // Try to sync with backend
+    try {
+      const financialProfile: FinancialProfile = {
+        annual_income: persona.annualIncome,
+        monthly_expenses: persona.monthlyExpenses,
+        credit_limit: persona.mlFeatures.LIMIT_BAL,
+        credit_accounts: persona.creditAccounts.length,
+        payment_frequency: persona.mlFeatures.PAY_0 <= 0 ? 'always' : 
+                          persona.mlFeatures.PAY_0 === 1 ? 'usually' : 'sometimes',
+        credit_utilization: Math.round((persona.mlFeatures.BILL_AMT1 / persona.mlFeatures.LIMIT_BAL) * 100),
+      };
+      await api.updateFinancialProfile(financialProfile);
+    } catch (err) {
+      console.log('Backend sync skipped (demo mode)');
+    }
+
+    setCurrentPage('dashboard');
+  };
+
+  // Handle form wizard submission (for manual entry)
   const handleFormSubmit = async (formData: any) => {
     try {
       // Update user's financial profile in backend
@@ -196,6 +247,29 @@ export default function App() {
     setCurrentPage('tracker');
   };
 
+  // Handle password reset request
+  const handleForgotPassword = () => {
+    setCurrentPage('forgot-password');
+  };
+
+  // Handle reset token received (from forgot password page)
+  const handleResetToken = (token: string) => {
+    setResetToken(token);
+    setCurrentPage('reset-password');
+  };
+
+  // Handle password reset submission
+  const handleResetPassword = async (newPassword: string) => {
+    // Simulate API call - in production this would call the backend
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // In demo mode, just show success
+    // In production: await api.resetPassword(resetToken, newPassword);
+    
+    setResetToken(null);
+    // Return to login page after successful reset
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -208,11 +282,11 @@ export default function App() {
     );
   }
 
-  // Get user display data
+  // Get user display data (prefer persona data if linked)
   const userData: UserData = {
-    name: user?.full_name || 'User',
-    email: user?.email || '',
-    creditScore: user?.credit_score || 650,
+    name: selectedPersona?.name || user?.full_name || 'User',
+    email: selectedPersona?.email || user?.email || '',
+    creditScore: selectedPersona?.expectedCreditScore || user?.credit_score || 650,
   };
 
   return (
@@ -235,7 +309,23 @@ export default function App() {
             onLogin={handleLogin}
             onRegister={handleRegister}
             onSwitchMode={() => setCurrentPage(currentPage === 'login' ? 'register' : 'login')}
+            onForgotPassword={handleForgotPassword}
             error={error}
+          />
+        )}
+
+        {currentPage === 'forgot-password' && (
+          <ForgotPasswordPage
+            onBack={() => setCurrentPage('login')}
+            onResetPassword={handleResetToken}
+          />
+        )}
+
+        {currentPage === 'reset-password' && resetToken && (
+          <ResetPasswordPage
+            token={resetToken}
+            onReset={handleResetPassword}
+            onBack={() => setCurrentPage('login')}
           />
         )}
         
@@ -243,9 +333,17 @@ export default function App() {
           <div className="container mx-auto px-6 py-12">
             <div className="text-center mb-8">
               <h2 className="text-[#1A365D] mb-4">Check Your Eligibility</h2>
-              <p className="text-[#64748B] text-xl">
+              <p className="text-[#64748B] text-xl mb-6">
                 Complete this quick assessment to see your personalized loan options
               </p>
+              {/* Quick Link Bank Option */}
+              <button
+                onClick={() => setShowLinkModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 text-[#0891B2] rounded-lg hover:bg-cyan-100 transition-colors mb-8"
+              >
+                <span className="text-lg">🏦</span>
+                <span>Or link bank account to auto-fill</span>
+              </button>
             </div>
             <FormWizard onSubmit={handleFormSubmit} />
           </div>
@@ -273,14 +371,31 @@ export default function App() {
         
         {currentPage === 'profile' && (
           <ProfilePage
-            userName={userData.name}
-            userEmail={userData.email}
-            onBack={() => setCurrentPage('dashboard')}
+            persona={selectedPersona}
+            onLinkAccount={() => setShowLinkModal(true)}
+            onUnlinkAccount={() => {
+              setSelectedPersona(null);
+              setUser(prev => prev ? { ...prev, credit_score: 650 } : null);
+            }}
           />
         )}
       </main>
       
       <Footer />
+
+      {/* Link Bank Account Modal */}
+      {showLinkModal && (
+        <LinkBankAccount
+          onSelectPersona={handleSelectPersona}
+          selectedPersonaId={selectedPersona?.id}
+          onClose={() => {
+            setShowLinkModal(false);
+            if (currentPage === 'login' || currentPage === 'register') {
+              setCurrentPage('check');
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ package com.creditwise.service;
 
 import com.creditwise.dto.CreditScoreResponse;
 import com.creditwise.dto.FinancialProfileRequest;
+import com.creditwise.dto.LoanPreferencesRequest;
 import com.creditwise.dto.UserResponse;
 import com.creditwise.entity.User;
 import com.creditwise.repository.UserRepository;
@@ -60,6 +61,28 @@ public class UserService {
         }
         if (request.getCreditUtilization() != null) {
             user.setCreditUtilization(request.getCreditUtilization());
+        }
+
+        user = userRepository.save(user);
+        return UserResponse.fromEntity(user);
+    }
+
+    /**
+     * Update user's loan preferences.
+     */
+    @Transactional
+    public UserResponse updateLoanPreferences(String email, LoanPreferencesRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (request.getDesiredLoanAmount() != null) {
+            user.setDesiredLoanAmount(request.getDesiredLoanAmount());
+        }
+        if (request.getLoanPurpose() != null) {
+            user.setLoanPurpose(request.getLoanPurpose());
+        }
+        if (request.getRepaymentPeriod() != null) {
+            user.setRepaymentPeriod(request.getRepaymentPeriod());
         }
 
         user = userRepository.save(user);

@@ -43,3 +43,4 @@ com/creditwise/dto/LoanProductResponse$LoanProductResponseBuilder.class
 com/creditwise/dto/AuthResponse.class
 com/creditwise/websocket/PredictionWebSocketHandler.class
 com/creditwise/dto/UserResponse.class
+com/creditwise/dto/LoanPreferencesRequest.class
