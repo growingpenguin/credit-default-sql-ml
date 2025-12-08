@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 
 from .core.config import settings
 from .core.database import Base, engine
-from .routers import auth_router, users_router, loans_router
+from .routers import auth_router, users_router, loans_router, predictions_router
 
 
 # =============================================================================
@@ -95,6 +95,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(loans_router, prefix="/api")
+app.include_router(predictions_router)  # ML predictions (no /api prefix for direct access)
 
 
 # =============================================================================
